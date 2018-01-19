@@ -382,12 +382,12 @@ module.exports = {
   tags_are_accepted: function(test) {
     var me = this;
     this.acceptor.once('connection', function(c) {
-      statsd_send('fo/o:250|c|#test:test',me.sock,'127.0.0.1',8125,function(){
+      statsd_send('fo/o:250|c|#test:test,bla:bla',me.sock,'127.0.0.1',8125,function(){
         statsd_send('b ar:250|c|#tag:label',me.sock,'127.0.0.1',8125,function(){
           statsd_send('foo+bar:250|c|#tag2:label',me.sock,'127.0.0.1',8125,function(){
             collect_for(me.acceptor, me.myflush * 2, function(strings){
               var str = strings.join();
-              test.ok(str.indexOf('fo-o#test:test') !== -1, "Did not map 'fo/o' => 'fo-o'");
+              test.ok(str.indexOf('fo-o#bla:bla,test:test') !== -1, "Did not map 'fo/o' => 'fo-o'");
               test.ok(str.indexOf('b_ar#tag:label') !== -1, "Did not map 'b ar' => 'b_ar'");
               test.ok(str.indexOf('foobar#tag2:label') !== -1, "Did not map 'foo+bar' => 'foobar'");
               test.done();
