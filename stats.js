@@ -231,15 +231,37 @@ config.configFile(process.argv[2], function (config) {
         if (config.dumpMessages) {
           l.log(metrics[midx].toString());
         }
-        var bits = metrics[midx].toString().split(':');
-        var key = sanitizeKeyName(bits.shift());
+        //':' is used both as a separator for tag:value and metric_name:value
+        //this is a bit ugly way to parse this, but dogstatsd does the exact same algorithm, so let's keep it :)
+        var broken_bits = metrics[midx].toString().split(':');
+        var bits = []
+        var partialDatum = null
+        for(var i = 0; i < broken_bits.length; i++) {
+          var token = broken_bits[i]
+          if(partialDatum == null) {
+            partialDatum = token
+          } else if(token.indexOf("|") < 0 ) {
+            partialDatum = partialDatum + ":" + token
+          } else {
+            bits.push(partialDatum)
+            partialDatum = token
+          }
+        }
+        if(partialDatum != null) {
+          bits.push(partialDatum)
+        }
+
+
+        var metricName = sanitizeKeyName(bits.shift());
 
         if (keyFlushInterval > 0) {
-          if (! keyCounter[key]) {
-            keyCounter[key] = 0;
+          //counters are on metric name only, not tags, or we would get a _lot_ of statistics
+          if (! keyCounter[metricName]) {
+            keyCounter[metricName] = 0;
           }
-          keyCounter[key] += 1;
+          keyCounter[metricName] += 1;
         }
+        
 
         if (bits.length === 0) {
           bits.push("1");
@@ -254,7 +276,25 @@ config.configFile(process.argv[2], function (config) {
               stats.messages.bad_lines_seen++;
               continue;
           }
-          if (fields[2]) {
+          var tags = []
+          if(fields[2]) {
+            for(var j = 2; j < fields.length; j++) {
+              var field = fields[j]
+              if(helpers.is_valid_sample_rate(field)) {
+
+              } else if(helpers.is_valid_tags_field(field)){
+                tags = field.substring(1).split(',').sort()
+              }
+            }
+          }
+
+          var key = metricName
+          if(tags.length > 0) {
+            //reassemble the tags into the key, to be parsed later by the backend if it supports tags
+            var key = metricName + '#' + tags.join(',')
+          }
+
+          if (fields[2] && helpers.is_valid_sample_rate(fields[2])) {
             sampleRate = Number(fields[2].match(/^@([\d\.]+)/)[1]);
           }
 

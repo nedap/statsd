@@ -124,6 +124,13 @@ module.exports = {
     test.done();
   },
 
+  tags_is_valid: function(test) {
+    test.equals(helpers.is_valid_packet(['345345', 'ms', '@2', '#tag_name:tag_value']), true);
+    test.equals(helpers.is_valid_packet(['345345', 'ms', '#tag_name:tag_value']), true);
+    test.equals(helpers.is_valid_packet(['345345', 'ms', 'tag_name:tag_value']), false);
+    test.done();
+  },
+
   correct_packet: function (test) {
     var res = helpers.is_valid_packet(['345345', 'ms', '@1.0']);
     test.equals(res, true);
